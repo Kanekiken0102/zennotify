@@ -1158,6 +1158,70 @@ header p{font-size:12px}
     restartPolling();
   });
 
+
+  // ---- Chart fallback ----
+  // If Chart.js CDN is unavailable, keep the dashboard running and render
+  // lightweight line/bar charts directly on canvas instead of stopping JS.
+  if (typeof window.Chart === 'undefined') {
+    window.Chart = function(ctx, config){
+      this.ctx = ctx && ctx.getContext ? ctx.getContext('2d') : null;
+      this.config = config || {};
+      this.data = this.config.data || {labels:[],datasets:[]};
+      this.options = this.config.options || {};
+      this.type = this.config.type || 'line';
+      this.update = function(){
+        var c = this.ctx, canvas = c && c.canvas;
+        if(!c || !canvas) return;
+        var rect = canvas.getBoundingClientRect();
+        var dpr = window.devicePixelRatio || 1;
+        var w = Math.max(1, Math.round(rect.width*dpr));
+        var h = Math.max(1, Math.round(rect.height*dpr));
+        if(canvas.width !== w || canvas.height !== h){ canvas.width=w; canvas.height=h; }
+        c.setTransform(dpr,0,0,dpr,0,0);
+        var W=rect.width,H=rect.height;
+        c.clearRect(0,0,W,H);
+        var ds=this.data.datasets||[], vals=[];
+        ds.forEach(function(s){ (s.data||[]).forEach(function(v){v=parseFloat(v);if(isFinite(v))vals.push(v);}); });
+        if(!vals.length) return;
+        var min=Math.min.apply(null,vals), max=Math.max.apply(null,vals);
+        if(min===max){min-=1;max+=1;}
+        var pad={l:8,r:6,t:10,b:18}, pw=W-pad.l-pad.r, ph=H-pad.t-pad.b;
+        c.strokeStyle='#EEF1F8'; c.lineWidth=1;
+        for(var gy=0;gy<4;gy++){
+          var yy=pad.t+ph*gy/3;
+          c.beginPath();c.moveTo(pad.l,yy);c.lineTo(W-pad.r,yy);c.stroke();
+        }
+        ds.forEach(function(s){
+          var arr=s.data||[], color=s.borderColor||'#4C6FE0';
+          c.strokeStyle=color;c.lineWidth=s.borderWidth||2;c.lineJoin='round';c.lineCap='round';
+          if((this.type||'line')==='bar'){
+            var bw=pw/Math.max(arr.length,1)*.55;
+            arr.forEach(function(v,i){
+              v=parseFloat(v); if(!isFinite(v))return;
+              var x=pad.l+(i+.5)*pw/Math.max(arr.length,1);
+              var y=pad.t+(max-v)/(max-min)*ph;
+              c.fillStyle=s.backgroundColor||color;
+              c.fillRect(x-bw/2,y,bw,pad.t+ph-y);
+            });
+          }else{
+            c.beginPath();var started=false;
+            arr.forEach(function(v,i){
+              v=parseFloat(v); if(!isFinite(v))return;
+              var x=pad.l+(arr.length<=1?pw/2:i*pw/(arr.length-1));
+              var y=pad.t+(max-v)/(max-min)*ph;
+              if(!started){c.moveTo(x,y);started=true;}else c.lineTo(x,y);
+            });
+            c.stroke();
+          }
+        },this);
+      };
+      this.destroy=function(){};
+      this.update();
+      return this;
+    };
+    window.Chart.defaults={font:{},color:'#8891a3'};
+  }
+
   // ---- Chart setup ----
   var chartFont = { family: "'Inter', sans-serif", size: 11 };
   Chart.defaults.font = chartFont;
