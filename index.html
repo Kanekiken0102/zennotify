@@ -1067,6 +1067,7 @@ header p{font-size:12px}
     </div>
   </div>
 
+  <div id="overlay" aria-hidden="true"></div>
   <div id="settings">
   <button class="close-x" id="closeSettings" aria-label="ปิด">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -1129,12 +1130,20 @@ header p{font-size:12px}
 
   var overlay = document.getElementById('overlay');
   var drawer = document.getElementById('settings');
-  document.getElementById('settingsBtn').addEventListener('click', function(){
-    overlay.classList.add('open'); drawer.classList.add('open');
-  });
-  function closeDrawer(){ overlay.classList.remove('open'); drawer.classList.remove('open'); }
-  document.getElementById('closeSettings').addEventListener('click', closeDrawer);
-  overlay.addEventListener('click', closeDrawer);
+  var settingsBtn = document.getElementById('settingsBtn');
+  var closeSettingsBtn = document.getElementById('closeSettings');
+  if(settingsBtn){
+    settingsBtn.addEventListener('click', function(){
+      if(overlay) overlay.classList.add('open');
+      if(drawer) drawer.classList.add('open');
+    });
+  }
+  function closeDrawer(){
+    if(overlay) overlay.classList.remove('open');
+    if(drawer) drawer.classList.remove('open');
+  }
+  if(closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeDrawer);
+  if(overlay) overlay.addEventListener('click', closeDrawer);
 
   document.getElementById('saveSettings').addEventListener('click', function(){
     cfg.channel = document.getElementById('cfgChannel').value.trim() || defaultCfg.channel;
@@ -1437,8 +1446,8 @@ header p{font-size:12px}
       });
     }
   });
-  closeBtn.addEventListener('click',closeSheet);
-  sheet.addEventListener('click',function(e){if(e.target===sheet)closeSheet();});
+  if(closeBtn) closeBtn.addEventListener('click',closeSheet);
+  if(sheet) sheet.addEventListener('click',function(e){if(e.target===sheet)closeSheet();});
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSheet();});
 })();
 </script>
